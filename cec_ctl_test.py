@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+
+'''
+Functional test script for CEC control of TV.
+
+James Fant-Male
+University of Bath
+December 2023
+'''
+
 import os
 import subprocess
 import sys

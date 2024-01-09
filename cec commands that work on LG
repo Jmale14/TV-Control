@@ -1,3 +1,6 @@
-sudo cec-ctl -d/dev/cec0 --playback -S
+sudo cec-ctl -d/dev/cec0 --playback -S // Set HDMI adapter on RPi to playback device
 
-sudo cec-ctl -d/dev/cec0 --to 0 --image-view-on
+sudo cec-ctl -d/dev/cec0 --to 0 --image-view-on // Turn on TV from standby mode
+
+sudo cec-ctl -d/dev/cec0 --to 0 --standby // TV to standby mode (only works on newer LG TVs?)
+    

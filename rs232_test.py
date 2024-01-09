@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
+
+'''
+Functional test script for rs-232 control of HDMI switcher.
+
+James Fant-Male
+University of Bath
+December 2023
+'''
+
 import time
 from rs_232_class import rs_232_ctl
 
-rs232_controller = rs_232_ctl(verbose=True)
+rs232_controller = rs_232_ctl(verbose=False)
 
 ##Test modes
-testAll = False
+testAll = True
 vFlip = False
 hFlip = False
 layout = False  
@@ -22,8 +31,8 @@ if testAll:
 	print("Testing ALL parameters. Duration Approx 3min.")
 
 ## Reset factory default
-#print(rs232_controller.reset())
-#time.sleep(3)
+print(rs232_controller.reset())
+time.sleep(3)
 
 print(rs232_controller.get_edid_info(1))
 
@@ -50,7 +59,7 @@ if layout or testAll:
 
 ## Upside Down Testing
 if vFlip or testAll:
-	print(rs232_controller.set_window_layout(2))
+	rs232_controller.set_window_layout(2)
 	time.sleep(1)
 	print("Display 1 Upside Down ON")
 	print(rs232_controller.vertical_flip(1, enabled=True))
@@ -70,7 +79,7 @@ if vFlip or testAll:
 
 ## Horizontal flip Testing
 if hFlip or testAll:
-	print(rs232_controller.set_window_layout(2))
+	rs232_controller.set_window_layout(2)
 	time.sleep(1)
 	print("Display 1 Upside Down ON")
 	print(rs232_controller.horizontal_flip(1, enabled=True))
@@ -90,7 +99,7 @@ if hFlip or testAll:
 
 ## Screen Priority Testing
 if priority or testAll:
-	print(rs232_controller.set_window_layout(1))
+	rs232_controller.set_window_layout(1)
 	time.sleep(1)
 	print("Input 2")
 	print(rs232_controller.set_window_priority(2))
@@ -104,8 +113,8 @@ if priority or testAll:
 
 ## Screen Swap Testing
 if swap or testAll:
-	print(rs232_controller.set_window_priority(2))
-	print(rs232_controller.set_window_layout(1))
+	rs232_controller.set_window_priority(2)
+	rs232_controller.set_window_layout(1)
 	time.sleep(1)
 	print("Swap True")
 	print(rs232_controller.set_window_swap(1))
@@ -148,67 +157,80 @@ if audio or testAll:
 	
 ## Screen position testing
 if screen_position or testAll:
-	print(rs232_controller.set_window_layout(1))
-	print(rs232_controller.set_window_swap(False))
-	print(rs232_controller.set_window_priority(2))
-	print(rs232_controller.set_backdrop_colour(1, "BLUE"))
-	print(rs232_controller.set_backdrop_colour(2, "BLACK"))
+	rs232_controller.set_window_layout(1)
+	rs232_controller.set_window_swap(False)
+	rs232_controller.set_window_priority(2)
+	rs232_controller.set_backdrop_colour(1, "BLUE")
+	rs232_controller.set_backdrop_colour(2, "BLACK")
 	time.sleep(1)
+	print("Testing vertical position screen 2")
 	for vposition in range(-400, 1000, 300):
 		print(rs232_controller.set_vposition(2, vposition))
 		time.sleep(0.3)
 	
+	print("Testing horizontal position screen 2")
 	for hposition in range(-400, 1700, 300):
 		print(rs232_controller.set_hposition(2, hposition))
 		time.sleep(0.3)
 	
+	print("Testing width screen 2")
 	for width in range(-200, 1000, 200):
 		print(rs232_controller.set_width(2, width))
 		time.sleep(0.3)
 	
+	print("Testing height screen 2")
 	for height in range(-200, 1000, 200):
 		print(rs232_controller.set_height(2, height))
 		time.sleep(0.3)
 	
+	print("Testing width screen 1")
 	for width in range(-200, 2300, 300):
 		print(rs232_controller.set_width(1, width))
 		time.sleep(0.3)
 	
+	print("Testing height screen 1")
 	for height in range(-200, 1500, 300):
 		print(rs232_controller.set_height(1, height))
 		time.sleep(0.5)
 	
-	print(rs232_controller.set_window_swap(True))
+	rs232_controller.set_window_swap(True)
 	time.sleep(1)
+	print("Testing vertical position screen 1")
 	for vposition in range(-400, 1000, 300):
 		print(rs232_controller.set_vposition(1, vposition))
 		time.sleep(0.3)
 	
+	print("Testing horizontal position screen 1")
 	for hposition in range(-400, 1700, 300):
 		print(rs232_controller.set_hposition(1, hposition))
 		time.sleep(0.5)
 
+	print("Testing width screen 1")
 	for width in range(-200, 1000, 200):
 		print(rs232_controller.set_width(1, width))
 		time.sleep(0.3)
 	
+	print("Testing height screen 1")
 	for height in range(-200, 1000, 200):
 		print(rs232_controller.set_height(1, height))
 		time.sleep(0.3)
 	
+	print("Testing width screen 2")
 	for width in range(-200, 2300, 300):
 		print(rs232_controller.set_width(2, width))
 		time.sleep(0.3)
 	
+	print("Testing height screen 2")
 	for height in range(-200, 1500, 300):
 		print(rs232_controller.set_height(2, height))
 		time.sleep(0.3)
 
 ## Change background colour testing
 if backdrop_colour or testAll:
-	print(rs232_controller.set_window_layout(1))
-	print(rs232_controller.set_window_swap(False))
+	rs232_controller.set_window_layout(1)
+	rs232_controller.set_window_swap(False)
 	time.sleep(1)
+	print("Testing background colours")
 	print(rs232_controller.set_backdrop_colour(1, "BLACK"))
 	time.sleep(1)
 	print(rs232_controller.set_backdrop_colour(1, 'BLUE'))
@@ -217,9 +239,10 @@ if backdrop_colour or testAll:
 	time.sleep(1)
 	print(rs232_controller.set_backdrop_colour(2, "BLUE"))
 	time.sleep(1)
+	print("Error test")
 	print(rs232_controller.set_backdrop_colour(1, "blue"))
 	time.sleep(1)
-	print(rs232_controller.set_window_swap(True))
+	rs232_controller.set_window_swap(True)
 	time.sleep(1)
 	print(rs232_controller.set_backdrop_colour(1, "BLACK"))
 	time.sleep(1)
@@ -229,19 +252,20 @@ if backdrop_colour or testAll:
 	time.sleep(1)
 	print(rs232_controller.set_backdrop_colour(2, "BLUE"))
 	time.sleep(1)
+	print("Error test")
 	print(rs232_controller.set_backdrop_colour(1, "BLA"))
 
 ## Still image testing  
 if imageStill or testAll:
 	print("Display 1 image still ON")
 	print(rs232_controller.set_still_image(1, enabled=True))
-	time.sleep(2)
+	time.sleep(5)
 	print("Display 1 image still OFF")
 	print(rs232_controller.set_still_image(1, enabled=False))
 	time.sleep(2)
 	print("Display 2 Uimage still ON")
 	print(rs232_controller.set_still_image(2, enabled=True))
-	time.sleep(2)
+	time.sleep(5)
 	print("Display 2 image still OFF")
 	print(rs232_controller.set_still_image(2, enabled=False))
 	time.sleep(2)
@@ -251,14 +275,18 @@ if imageStill or testAll:
 
 ## Display text testing
 if displayText or testAll:
-	print(rs232_controller.set_window_layout(1))
-	print(rs232_controller.set_window_swap(False))
-	print(rs232_controller.set_window_priority(2))
+	rs232_controller.set_window_layout(1)
+	rs232_controller.set_window_swap(False)
+	rs232_controller.set_window_priority(2)
+	print("Test text display")
 	print(rs232_controller.set_display_text("TESTING TESTING TESTING TESTING"))
 	time.sleep(10)
+	print("Error test")
 	print(rs232_controller.set_display_text("This string should be far far far far far too looooong"))
 
+## Colour format testing
 if colFormat:
+	print("Test colour formats")
 	print(rs232_controller.set_colour_format(1, 1))
 	time.sleep(2)
 	print(rs232_controller.set_colour_format(1, 2))
@@ -268,8 +296,8 @@ if colFormat:
 	
 
 ## Reset to factory default
-#print(rs232_controller.reset())
-#time.sleep(3)
+print(rs232_controller.reset())
+time.sleep(3)
 
 rs232_controller.close()
 

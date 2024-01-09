@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
+
+'''
+James Fant-Male
+University of Bath
+December 2023
+'''
+
 import sys
 import os
 import subprocess
-print(sys.version)
 
 class cec_ctl:
 	def __init__(self, verbose=False):
