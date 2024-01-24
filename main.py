@@ -1,7 +1,7 @@
 import cv2
 import threading
 import time
-
+from rs_232_class import rs_232_ctl
 
 def set_flag_after_delay(flag, delay):
     flag[0] = True
@@ -11,27 +11,33 @@ def set_flag_after_delay(flag, delay):
 
 class VideoPlayer:
     def __init__(self):
-        self.tv_cap = cv2.VideoCapture("video_tv.mkv")
-        if not self.tv_cap.isOpened():
-            print("Error: Could not open TV video file.")
-            exit(-1)
+        self.display_controller = rs_232_ctl(verbose=False)
+        self.display_controller.reset()
+        self.resolution = self.display_controller.get_resolution()
 
-        self.family_ring_cap = cv2.VideoCapture("video_family.mp4")
+        self.screenID = {"TV": 1, "RPi": 2}
+
+        # self.tv_cap = cv2.VideoCapture("video_tv.mkv")
+        # if not self.tv_cap.isOpened():
+        #     print("Error: Could not open TV video file.")
+        #     exit(-1)
+
+        self.family_ring_cap = cv2.VideoCapture("media/video_family.mp4")
         if not self.family_ring_cap.isOpened():
             print("Error: Could not open family video file.")
             exit(-1)
 
-        self.ad_cap = cv2.VideoCapture("video_ad.mkv")
+        self.ad_cap = cv2.VideoCapture("media/video_ad.mkv")
         if not self.ad_cap.isOpened():
             print("Error: Could not open exercise advert video file.")
             exit(-1)
 
-        self.exercise_ad_cap = cv2.VideoCapture("video_exercise_ad.mkv")
+        self.exercise_ad_cap = cv2.VideoCapture("media/video_exercise_ad.mkv")
         if not self.exercise_ad_cap.isOpened():
             print("Error: Could not open exercise advert video file.")
             exit(-1)
 
-        self.exercise_pip_cap = cv2.VideoCapture("video_exercise.mkv")
+        self.exercise_pip_cap = cv2.VideoCapture("media/video_exercise.mkv")
         if not self.exercise_pip_cap.isOpened():
             print("Error: Could not open exercise video file.")
             exit(-1)
@@ -44,46 +50,46 @@ class VideoPlayer:
         cv2.setWindowProperty("Video", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
         self.welcome = [False]
-        self.welcome_page = cv2.imread('Welcome.PNG')
+        self.welcome_page = cv2.imread('media/Welcome.PNG')
 
         # Scenario 2 - hydration reminder
         self.hydration_reminder = [False]
-        self.hydration_notification = cv2.imread('hydration_notification.jpeg')
+        self.hydration_notification = cv2.imread('media/hydration_notification.jpeg')
         self.hydration_notification = self.resize_notification(self.hydration_notification)
 
         # Scenario 3 - family calling
         self.family_ringing = [False]
         self.family_answered = [False]
-        self.call_notification = cv2.imread('call_notification.png')
+        self.call_notification = cv2.imread('media/call_notification.png')
         self.call_notification = self.resize_notification(self.call_notification)
 
         # Scenario 7 - ad break prompt during exercise
         self.exercise_ad_popup = [False]
         self.exercise_ad_full = [False]
         self.exercise_ad_reminder_set = [False]
-        self.exercise_ad_notification = cv2.imread('exercise_ad_notification.jpg')
+        self.exercise_ad_notification = cv2.imread('media/exercise_ad_notification.jpg')
         self.exercise_ad_notification = self.resize_notification(self.exercise_ad_notification)
-        self.exercise_ad_reminder = cv2.imread('exercise_ad_reminder_set.jpg')
+        self.exercise_ad_reminder = cv2.imread('media/exercise_ad_reminder_set.jpg')
         self.exercise_ad_reminder = self.resize_notification(self.exercise_ad_reminder)
 
         # Scenario 8 - pip exercise during tv programme
         self.exercise_pip_popup = [False]
         self.exercise_pip = [False]
         self.exercise_pip_reminder_set = [False]
-        self.exercise_pip_notification = cv2.imread('exercise_pip_notification.jpg')
+        self.exercise_pip_notification = cv2.imread('media/exercise_pip_notification.jpg')
         self.exercise_pip_notification = self.resize_notification(self.exercise_pip_notification)
-        self.exercise_pip_reminder = cv2.imread('exercise_pip_reminder_set.jpg')
+        self.exercise_pip_reminder = cv2.imread('media/exercise_pip_reminder_set.jpg')
         self.exercise_pip_reminder = self.resize_notification(self.exercise_pip_reminder)
 
         # Scenario 9 - Tai Chi reminder
         self.taichi_reminder = [False]
         self.taichi_acknowledge = [False]
         self.taichi_snooze = [False]
-        self.taichi_notification = cv2.imread('taichi_notification.jpeg')
+        self.taichi_notification = cv2.imread('media/taichi_notification.jpeg')
         self.taichi_notification = self.resize_notification(self.taichi_notification)
-        self.taichi_acknowledge_notification = cv2.imread('taichi_acknowledge.jpeg')
+        self.taichi_acknowledge_notification = cv2.imread('media/taichi_acknowledge.jpeg')
         self.taichi_acknowledge_notification = self.resize_notification(self.taichi_acknowledge_notification)
-        self.taichi_snooze_notification = cv2.imread('taichi_snooze.jpeg')
+        self.taichi_snooze_notification = cv2.imread('media/taichi_snooze.jpeg')
         self.taichi_snooze_notification = self.resize_notification(self.taichi_snooze_notification)
 
         self.buffer = 20
@@ -109,20 +115,38 @@ class VideoPlayer:
         self.taichi_acknowledge = [False]
         self.taichi_snooze = [False]
 
-    def add_notification(self, frame, notification):
+    def add_notification(self, notification):
         # Overlay the image in the top-left corner
-        frame[self.buffer:notification.shape[0]+self.buffer, frame.shape[1] - notification.shape[1] - self.buffer:frame.shape[1] - self.buffer] = notification
-        return frame
+        #frame[self.buffer:notification.shape[0]+self.buffer, frame.shape[1] - notification.shape[1] - self.buffer:frame.shape[1] - self.buffer] = notification
+        
+        width = notification.shape[0]
+        height = notification.shape[1]
+        self.display_controller.set_hposition(self.screenID["RPi"], self.resolution[1]-width-self.buffer)
+        self.display_controller.set_vposition(self.screenID["RPi"], self.resolution[2]-height)
+        self.display_controller.set_height(self.screenID["RPi"], height)
+        self.display_controller.set_width(self.screenID["RPi"], width)
+        self.display_controller.set_window_layout(1)
 
-    def add_pip(self, frame, pip_cap):
+        return notification
+
+    def add_pip(self, pip_cap):
         ret, pip_frame = pip_cap.read()
         if not ret:
             pip_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             ret, pip_frame = pip_cap.read()
 
         pip_frame = cv2.resize(pip_frame, (self.width // 4, self.height // 4))
-        frame[self.buffer:pip_frame.shape[0]+self.buffer, frame.shape[1] - pip_frame.shape[1] - self.buffer:frame.shape[1] - self.buffer] = pip_frame
-        return frame
+        #frame[self.buffer:pip_frame.shape[0]+self.buffer, frame.shape[1] - pip_frame.shape[1] - self.buffer:frame.shape[1] - self.buffer] = pip_frame
+        
+        width = pip_frame.shape[0]
+        height = pip_frame.shape[1]
+        self.display_controller.set_hposition(self.screenID["RPi"], self.resolution[1]-width-self.buffer)
+        self.display_controller.set_vposition(self.screenID["RPi"], self.resolution[2]-height)
+        self.display_controller.set_height(self.screenID["RPi"], height)
+        self.display_controller.set_width(self.screenID["RPi"], width)
+        self.display_controller.set_window_layout(1)
+
+        return pip_frame
 
     def prompt_options(self, key):
 
@@ -208,78 +232,88 @@ class VideoPlayer:
 
         return None
 
-    def modify_frame(self, cap, frame):
+    def modify_frame(self, cap):
         # Scenario 2
         if self.hydration_reminder[0] is True:
-            frame = self.add_notification(frame, self.hydration_notification)
+            frame = self.add_notification(self.hydration_notification)
 
         # Scenario 3
         if self.family_ringing[0] is True:
-            frame = self.add_notification(frame, self.call_notification)
+            frame = self.add_notification(self.call_notification)
 
         if self.family_answered[0] is True:
-            frame = self.add_pip(frame, self.family_ring_cap)
+            frame = self.add_pip(self.family_ring_cap)
 
         # Scenario 7
         if self.exercise_ad_popup[0] is True:
             cap = self.ad_cap
-            frame = self.add_notification(frame, self.exercise_ad_notification)
+            frame = self.add_notification(self.exercise_ad_notification)
 
         if self.exercise_ad_full[0] is True:
             cap = self.exercise_ad_cap
 
         if self.exercise_ad_reminder_set[0] is True:
-            frame = self.add_notification(frame, self.exercise_ad_reminder)
+            frame = self.add_notification(self.exercise_ad_reminder)
 
         # Scenario 8
         if self.exercise_pip_popup[0] is True:
-            frame = self.add_notification(frame, self.exercise_pip_notification)
+            frame = self.add_notification(self.exercise_pip_notification)
 
         if self.exercise_pip[0] is True:
-            frame = self.add_pip(frame, self.exercise_pip_cap)
+            frame = self.add_pip(self.exercise_pip_cap)
 
         if self.exercise_pip_reminder_set[0] is True:
-            frame = self.add_notification(frame, self.exercise_pip_reminder)
+            frame = self.add_notification(self.exercise_pip_reminder)
 
         # Scenario 9
         if self.taichi_reminder[0] is True:
-            frame = self.add_notification(frame, self.taichi_notification)
+            frame = self.add_notification(self.taichi_notification)
 
         if self.taichi_acknowledge[0] is True:
-            frame = self.add_notification(frame, self.taichi_acknowledge_notification)
+            frame = self.add_notification(self.taichi_acknowledge_notification)
 
         if self.taichi_snooze[0] is True:
-            frame = self.add_notification(frame, self.taichi_snooze_notification)
+            frame = self.add_notification(self.taichi_snooze_notification)
 
         return cap, frame
 
     def play_video(self):
 
+        # Welcome full screen
+        self.display_controller.set_window_layout(5)
+        self.display_controller.set_window_swap(True)
         cv2.imshow("Video", self.welcome_page)
         cv2.waitKey(0)
 
-        cap = self.tv_cap
+        # cap = self.tv_cap
 
         while True:
-            ret, frame = cap.read()
+            # ret, frame = cap.read()
 
-            if not ret:
-                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                ret, frame = cap.read()
-
-            cap, frame = self.modify_frame(cap, frame)
-
-            # Display the frame in full screen
-            cv2.imshow("Video", frame)
+            # if not ret:
+            #     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            #     ret, frame = cap.read()
 
             # Check for key press
             key = cv2.waitKey(1)
+            if (key != -1):
+                self.prompt_options(key)
 
-            self.prompt_options(key)
+                ret_cap = self.scenario_options(key)
+                if ret_cap is not None:
+                    cap = ret_cap
 
-            ret_cap = self.scenario_options(key)
-            if ret_cap is not None:
-                cap = ret_cap
+                cap, frame = self.modify_frame(cap)
+
+                cv2.imshow("Video", frame)
+
+            else:
+                # Display the frame in full screen
+                self.display_controller.set_window_layout(5)
+                self.display_controller.set_window_swap(False)
+                # cv2.imshow("Video", frame)
+
+            
 
         # Release the video capture object and close the window
         cap.release()
