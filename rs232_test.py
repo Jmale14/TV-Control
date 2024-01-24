@@ -11,7 +11,7 @@ December 2023
 import time
 from rs_232_class import rs_232_ctl
 
-rs232_controller = rs_232_ctl(verbose=False)
+rs232_controller = rs_232_ctl(verbose=True)
 
 ##Test modes
 testAll = True
@@ -20,7 +20,7 @@ hFlip = False
 layout = False  
 priority = False
 swap = False
-audio = False
+audio = True
 screen_position = False
 backdrop_colour = False
 imageStill = False
@@ -144,13 +144,13 @@ if audio or testAll:
 	time.sleep(2)
 	print("Audio source error test")
 	print(rs232_controller.set_audio_source(3))
-	time.sleep(2)
+	time.sleep(5)
 	print("Mute On")
 	print(rs232_controller.mute(1))
-	time.sleep(2)
+	time.sleep(5)
 	print("Mute Off")
 	print(rs232_controller.mute(False))
-	time.sleep(2)
+	time.sleep(5)
 	print("Mute Error test")
 	print(rs232_controller.mute(3))
 	time.sleep(2)

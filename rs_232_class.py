@@ -25,7 +25,7 @@ class rs_232_ctl:
 		self.ser.flushOutput()
 		self.ser.close()
 	
-	def response_listen(self, display=False):
+	def response_listen(self, display=True):
 		"""Read serial data while available.
 		"""
 		data = []
@@ -135,13 +135,62 @@ class rs_232_ctl:
 		response = 0
 		if int(enabled) in [0, 1]:
 			self.ser.write(f'SET OUT A MUTE {int(enabled)}\r'.encode('utf-8'))
-			if self.verbose:
-				response = self.response_listen()
+			response = self.response_listen()
 		else:
 			print("Invalid enabled value, enter 0 or 1")
 			response = 1
 		return response
 	
+	def get_resolution(self):
+		"""Get resolution of screen.
+		"""
+		response = 0
+		self.ser.flushInput()
+		self.ser.flushOutput()
+		self.ser.write(f'GET OUT A TIMING\r'.encode('utf-8'))
+		serdata = self.response_listen()
+		response = int(serdata[-1].split(' ')[-1].strip())
+		if response == 0:
+			resolution = ["native", None, None]
+		elif response == 4:
+			resolution = ["480P60", 640, 480]
+		elif response == 6:
+			resolution = ["720P60", 1280, 720]
+		elif response == 10:
+			resolution = ["1080P60", 1920, 1080]
+		elif response == 11:
+			resolution = ["576P50", 720, 576]
+		elif response == 12:
+			resolution = ["720P50", 1280, 720]
+		elif response == 16:
+			resolution = ["1080P24", 1920, 1080]
+		elif response == 17:
+			resolution = ["1080P25", 1920, 1080]
+		elif response == 19:
+			resolution = ["1080P30", 1920, 1080]
+		elif response == 416:
+			resolution = ["1024x768", 1024, 768]
+		elif response == 417:
+			resolution = ["1280x800", 1280, 800]
+		elif response == 419:
+			resolution = ["1280x1024", 1280, 1024]
+		elif response == 420:
+			resolution = ["1366x768", 1366, 768]
+		elif response == 423:
+			resolution = ["1440x900", 1440, 900]
+		elif response == 424:
+			resolution = ["1600x900RB", 1600, 900]
+		elif response == 425:
+			resolution = ["1600x1200", 1600, 1200]
+		elif response == 426:
+			resolution = ["1680x1050", 1680, 1050]
+		elif response == 430:
+			resolution = ["1920x1200RB", 1920, 1200]
+		else:
+			resolution = ["unknown", None, None]
+			
+		return resolution
+		
 	def set_vposition(self, screen, position):
 		"""Set vertical position of screen. Position is in pixels, 0-(resolution-1).
 		"""
