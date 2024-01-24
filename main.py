@@ -12,8 +12,10 @@ def set_flag_after_delay(flag, delay):
 class VideoPlayer:
     def __init__(self):
         self.display_controller = rs_232_ctl(verbose=False)
-        self.display_controller.reset()
+        #self.display_controller.reset()
         self.resolution = self.display_controller.get_resolution()
+        self.reset_screen = False
+        self.pip_active = False
 
         self.screenID = {"TV": 1, "RPi": 2}
 
@@ -43,8 +45,8 @@ class VideoPlayer:
             exit(-1)
 
         # Get the video width and height
-        self.width = int(self.tv_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.height = int(self.tv_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        #self.width = int(self.tv_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        #self.height = int(self.tv_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         cv2.namedWindow("Video", cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty("Video", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -119,13 +121,19 @@ class VideoPlayer:
         # Overlay the image in the top-left corner
         #frame[self.buffer:notification.shape[0]+self.buffer, frame.shape[1] - notification.shape[1] - self.buffer:frame.shape[1] - self.buffer] = notification
         
-        width = notification.shape[0]
-        height = notification.shape[1]
-        self.display_controller.set_hposition(self.screenID["RPi"], self.resolution[1]-width-self.buffer)
-        self.display_controller.set_vposition(self.screenID["RPi"], self.resolution[2]-height)
-        self.display_controller.set_height(self.screenID["RPi"], height)
-        self.display_controller.set_width(self.screenID["RPi"], width)
-        self.display_controller.set_window_layout(1)
+        if not self.pip_active:
+            width = notification.shape[1]
+            height = notification.shape[0]
+            self.display_controller.set_window_layout(1)
+            time.sleep(0.5)
+            self.display_controller.set_window_priority(2)
+            time.sleep(0.5)
+            self.display_controller.set_hposition(self.screenID["RPi"], self.resolution[1]-width)#-self.buffer)
+            self.display_controller.set_vposition(self.screenID["RPi"], 0)#self.resolution[2]-height)
+            self.display_controller.set_height(self.screenID["RPi"], height)
+            self.display_controller.set_width(self.screenID["RPi"], width)
+            time.sleep(0.5)
+            self.pip_active = True
 
         return notification
 
@@ -135,16 +143,22 @@ class VideoPlayer:
             pip_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             ret, pip_frame = pip_cap.read()
 
-        pip_frame = cv2.resize(pip_frame, (self.width // 4, self.height // 4))
+        pip_frame = cv2.resize(pip_frame, (self.resolution[1] // 4, self.resolution[2] // 4))
         #frame[self.buffer:pip_frame.shape[0]+self.buffer, frame.shape[1] - pip_frame.shape[1] - self.buffer:frame.shape[1] - self.buffer] = pip_frame
         
-        width = pip_frame.shape[0]
-        height = pip_frame.shape[1]
-        self.display_controller.set_hposition(self.screenID["RPi"], self.resolution[1]-width-self.buffer)
-        self.display_controller.set_vposition(self.screenID["RPi"], self.resolution[2]-height)
-        self.display_controller.set_height(self.screenID["RPi"], height)
-        self.display_controller.set_width(self.screenID["RPi"], width)
-        self.display_controller.set_window_layout(1)
+        if not self.pip_active:
+            width = pip_frame.shape[0]
+            height = pip_frame.shape[1]
+            self.display_controller.set_window_layout(1)
+            time.sleep(0.5)
+            self.display_controller.set_window_priority(2)
+            time.sleep(0.5)
+            self.display_controller.set_hposition(self.screenID["RPi"], self.resolution[1]-width)#-self.buffer)
+            self.display_controller.set_vposition(self.screenID["RPi"], 0)#self.resolution[2]-height)
+            self.display_controller.set_height(self.screenID["RPi"], height)
+            self.display_controller.set_width(self.screenID["RPi"], width)
+            time.sleep(0.5)
+            self.pip_active = True
 
         return pip_frame
 
@@ -201,7 +215,7 @@ class VideoPlayer:
     def scenario_options(self, key):
         if key == ord("p"):
             self.reset_flags()
-            return self.tv_cap
+            return None#self.tv_cap
 
         elif key == ord("a"):
             self.reset_flags()
@@ -232,7 +246,9 @@ class VideoPlayer:
 
         return None
 
-    def modify_frame(self, cap):
+    def modify_frame(self):
+        cap = None
+        frame = None
         # Scenario 2
         if self.hydration_reminder[0] is True:
             frame = self.add_notification(self.hydration_notification)
@@ -275,18 +291,26 @@ class VideoPlayer:
         if self.taichi_snooze[0] is True:
             frame = self.add_notification(self.taichi_snooze_notification)
 
+        # Reset if no scenarios
+        if ((frame is None)and(cap is None)and(self.pip_active)):
+            self.reset_screen = True
+        
         return cap, frame
 
     def play_video(self):
 
         # Welcome full screen
         self.display_controller.set_window_layout(5)
-        self.display_controller.set_window_swap(True)
+        time.sleep(0.5)
+        self.display_controller.set_window_priority(2)
+        time.sleep(1)
         cv2.imshow("Video", self.welcome_page)
         cv2.waitKey(0)
+        
+        self.reset_screen = True
 
         # cap = self.tv_cap
-
+        
         while True:
             # ret, frame = cap.read()
 
@@ -296,22 +320,28 @@ class VideoPlayer:
 
             # Check for key press
             key = cv2.waitKey(1)
-            if (key != -1):
-                self.prompt_options(key)
+            #if (key != -1):
+            self.prompt_options(key)
 
-                ret_cap = self.scenario_options(key)
-                if ret_cap is not None:
-                    cap = ret_cap
+            ret_cap = self.scenario_options(key)
+            if ret_cap is not None:
+                cap = ret_cap
 
-                cap, frame = self.modify_frame(cap)
+            cap, frame = self.modify_frame()
 
+            if frame is not None:
                 cv2.imshow("Video", frame)
 
-            else:
+            if self.reset_screen:
                 # Display the frame in full screen
+                time.sleep(0.5)
                 self.display_controller.set_window_layout(5)
-                self.display_controller.set_window_swap(False)
+                time.sleep(0.5)
+                self.display_controller.set_window_priority(1)
+                time.sleep(0.5)
                 # cv2.imshow("Video", frame)
+                self.reset_screen = False
+                self.pip_active = False
 
             
 
