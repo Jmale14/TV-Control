@@ -2,6 +2,7 @@ import cv2
 import threading
 import time
 from rs_232_class import rs_232_ctl
+from imutils.video import FileVideoStream
 
 def set_flag_after_delay(flag, delay):
     flag[0] = True
@@ -12,41 +13,49 @@ def set_flag_after_delay(flag, delay):
 class VideoPlayer:
     def __init__(self):
         self.display_controller = rs_232_ctl(verbose=False)
-        #self.display_controller.reset()
         self.resolution = self.display_controller.get_resolution()
+        
         self.reset_screen = False
         self.pip_active = False
+        self.override_TV = False
+        self.ad_active = False
+        
+        self.notification_scale = 35
+        self.pip_scale = 45
 
         self.screenID = {"TV": 1, "RPi": 2}
 
-        # self.tv_cap = cv2.VideoCapture("video_tv.mkv")
-        # if not self.tv_cap.isOpened():
-        #     print("Error: Could not open TV video file.")
-        #     exit(-1)
+        # Set Notification Preset
+        width = 16*self.notification_scale
+        height = 9*self.notification_scale
+        self.display_controller.set_window_layout(1)
+        self.display_controller.set_window_priority(2)
+        self.display_controller.set_hposition(self.screenID["RPi"], self.resolution[1]-width)
+        self.display_controller.set_vposition(self.screenID["RPi"], 0)
+        self.display_controller.set_height(self.screenID["RPi"], height)
+        self.display_controller.set_width(self.screenID["RPi"], width)
+        time.sleep(1)
 
-        self.family_ring_cap = cv2.VideoCapture("media/video_family.mp4")
+        self.family_ring_cap = cv2.VideoCapture("media/video_family_comp.mp4")
         if not self.family_ring_cap.isOpened():
             print("Error: Could not open family video file.")
             exit(-1)
+        
 
-        self.ad_cap = cv2.VideoCapture("media/video_ad.mkv")
+        self.ad_cap = cv2.VideoCapture("media/video_ad_comp.mkv")
         if not self.ad_cap.isOpened():
             print("Error: Could not open exercise advert video file.")
             exit(-1)
 
-        self.exercise_ad_cap = cv2.VideoCapture("media/video_exercise_ad.mkv")
+        self.exercise_ad_cap = cv2.VideoCapture("media/video_exercise_ad_comp.mkv")
         if not self.exercise_ad_cap.isOpened():
             print("Error: Could not open exercise advert video file.")
             exit(-1)
 
-        self.exercise_pip_cap = cv2.VideoCapture("media/video_exercise.mkv")
+        self.exercise_pip_cap = cv2.VideoCapture("media/video_exercise_comp.mkv")
         if not self.exercise_pip_cap.isOpened():
             print("Error: Could not open exercise video file.")
             exit(-1)
-
-        # Get the video width and height
-        #self.width = int(self.tv_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        #self.height = int(self.tv_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         cv2.namedWindow("Video", cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty("Video", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -118,47 +127,43 @@ class VideoPlayer:
         self.taichi_snooze = [False]
 
     def add_notification(self, notification):
-        # Overlay the image in the top-left corner
-        #frame[self.buffer:notification.shape[0]+self.buffer, frame.shape[1] - notification.shape[1] - self.buffer:frame.shape[1] - self.buffer] = notification
+        # Overlay the image in the top-right corner
         
         if not self.pip_active:
-            width = notification.shape[1]
-            height = notification.shape[0]
+            #width = notification.shape[1]*self.notification_scale
+            #height = notification.shape[0]*self.notification_scale
             self.display_controller.set_window_layout(1)
-            time.sleep(0.5)
-            self.display_controller.set_window_priority(2)
-            time.sleep(0.5)
-            self.display_controller.set_hposition(self.screenID["RPi"], self.resolution[1]-width)#-self.buffer)
-            self.display_controller.set_vposition(self.screenID["RPi"], 0)#self.resolution[2]-height)
-            self.display_controller.set_height(self.screenID["RPi"], height)
-            self.display_controller.set_width(self.screenID["RPi"], width)
-            time.sleep(0.5)
+            #self.display_controller.set_hposition(self.screenID["RPi"], self.resolution[1]-width)
+            #self.display_controller.set_vposition(self.screenID["RPi"], 0)
+            #self.display_controller.set_height(self.screenID["RPi"], height)
+            #self.display_controller.set_width(self.screenID["RPi"], width)
             self.pip_active = True
 
         return notification
 
+    def add_ad_notification(self, frame, notification):
+        # Overlay the image in the top-left corner
+        frame[self.buffer:notification.shape[0]+self.buffer, frame.shape[1] - notification.shape[1] - self.buffer:frame.shape[1] - self.buffer] = notification
+        return frame
+        
     def add_pip(self, pip_cap):
+            
+        if not self.pip_active:
+            #pip_cap.start()
+            #width = pip_frame.shape[0]*pip_scale
+            #height = pip_frame.shape[1]*self.pip_scale
+            self.display_controller.set_window_layout(1)
+            #self.display_controller.set_hposition(self.screenID["RPi"], self.resolution[1]-width)
+            #self.display_controller.set_vposition(self.screenID["RPi"], 0)
+            #self.display_controller.set_height(self.screenID["RPi"], height)
+            #self.display_controller.set_width(self.screenID["RPi"], width)
+
+            self.pip_active = True 
+        
         ret, pip_frame = pip_cap.read()
         if not ret:
             pip_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             ret, pip_frame = pip_cap.read()
-
-        pip_frame = cv2.resize(pip_frame, (self.resolution[1] // 4, self.resolution[2] // 4))
-        #frame[self.buffer:pip_frame.shape[0]+self.buffer, frame.shape[1] - pip_frame.shape[1] - self.buffer:frame.shape[1] - self.buffer] = pip_frame
-        
-        if not self.pip_active:
-            width = pip_frame.shape[0]
-            height = pip_frame.shape[1]
-            self.display_controller.set_window_layout(1)
-            time.sleep(0.5)
-            self.display_controller.set_window_priority(2)
-            time.sleep(0.5)
-            self.display_controller.set_hposition(self.screenID["RPi"], self.resolution[1]-width)#-self.buffer)
-            self.display_controller.set_vposition(self.screenID["RPi"], 0)#self.resolution[2]-height)
-            self.display_controller.set_height(self.screenID["RPi"], height)
-            self.display_controller.set_width(self.screenID["RPi"], width)
-            time.sleep(0.5)
-            self.pip_active = True
 
         return pip_frame
 
@@ -175,6 +180,7 @@ class VideoPlayer:
                 self.exercise_ad_popup[0] = False
                 timer_thread = threading.Thread(target=set_flag_after_delay, args=(self.exercise_ad_full, 10))
                 timer_thread.start()
+                self.override_TV = True
 
             if self.exercise_pip_popup[0] is True:
                 self.exercise_pip_popup[0] = False
@@ -215,11 +221,16 @@ class VideoPlayer:
     def scenario_options(self, key):
         if key == ord("p"):
             self.reset_flags()
-            return None#self.tv_cap
+            return None
 
         elif key == ord("a"):
             self.reset_flags()
-            return self.ad_cap
+            if self.ad_active:
+                self.ad_active = False
+                return 1
+            else:
+                self.ad_active = True
+                return self.ad_cap
 
         elif key == ord("2"):
             timer_thread = threading.Thread(target=set_flag_after_delay, args=(self.hydration_reminder, 5))
@@ -242,57 +253,70 @@ class VideoPlayer:
             timer_thread.start()
 
         elif key == ord("x"):
+            self.display_controller.set_full_scrn_mode(2)
             exit()
 
         return None
 
-    def modify_frame(self):
-        cap = None
-        frame = None
+    def modify_frame(self, cap, frame):
+        reset = True
+        
         # Scenario 2
         if self.hydration_reminder[0] is True:
             frame = self.add_notification(self.hydration_notification)
+            reset = False
 
         # Scenario 3
         if self.family_ringing[0] is True:
             frame = self.add_notification(self.call_notification)
+            reset = False
 
         if self.family_answered[0] is True:
             frame = self.add_pip(self.family_ring_cap)
+            reset = False
 
         # Scenario 7
         if self.exercise_ad_popup[0] is True:
-            cap = self.ad_cap
-            frame = self.add_notification(self.exercise_ad_notification)
+            #cap = self.ad_cap
+            frame = self.add_ad_notification(frame, self.exercise_ad_notification)
+            reset = False
 
         if self.exercise_ad_full[0] is True:
             cap = self.exercise_ad_cap
+            reset = False
 
         if self.exercise_ad_reminder_set[0] is True:
-            frame = self.add_notification(self.exercise_ad_reminder)
+            frame = self.add_ad_notification(frame, self.exercise_ad_reminder)
+            reset = False
 
         # Scenario 8
         if self.exercise_pip_popup[0] is True:
             frame = self.add_notification(self.exercise_pip_notification)
+            reset = False
 
         if self.exercise_pip[0] is True:
             frame = self.add_pip(self.exercise_pip_cap)
+            reset = False
 
         if self.exercise_pip_reminder_set[0] is True:
             frame = self.add_notification(self.exercise_pip_reminder)
+            reset = False
 
         # Scenario 9
         if self.taichi_reminder[0] is True:
             frame = self.add_notification(self.taichi_notification)
+            reset = False
 
         if self.taichi_acknowledge[0] is True:
             frame = self.add_notification(self.taichi_acknowledge_notification)
+            reset = False
 
         if self.taichi_snooze[0] is True:
             frame = self.add_notification(self.taichi_snooze_notification)
+            reset = False
 
         # Reset if no scenarios
-        if ((frame is None)and(cap is None)and(self.pip_active)):
+        if ((reset)and(self.pip_active)):
             self.reset_screen = True
         
         return cap, frame
@@ -300,46 +324,53 @@ class VideoPlayer:
     def play_video(self):
 
         # Welcome full screen
-        self.display_controller.set_window_layout(5)
-        time.sleep(0.5)
-        self.display_controller.set_window_priority(2)
-        time.sleep(1)
+        self.display_controller.set_full_scrn_mode(2)
         cv2.imshow("Video", self.welcome_page)
         cv2.waitKey(0)
         
         self.reset_screen = True
 
-        # cap = self.tv_cap
+        cap = None
+        frame = None
         
         while True:
-            # ret, frame = cap.read()
+            
+            if cap is not None:
+                ret, frame = cap.read()
 
-            # if not ret:
-            #     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-            #     ret, frame = cap.read()
-
-            # Check for key press
-            key = cv2.waitKey(1)
-            #if (key != -1):
-            self.prompt_options(key)
-
-            ret_cap = self.scenario_options(key)
-            if ret_cap is not None:
-                cap = ret_cap
-
-            cap, frame = self.modify_frame()
-
+                if not ret:
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, frame = cap.read()
+            
+            try:
+                cap, frame = self.modify_frame(cap, frame)
+            except Exception as e:
+                    print(e)
+            
             if frame is not None:
                 cv2.imshow("Video", frame)
+            # Check for key press
+            key = cv2.waitKey(1)
 
-            if self.reset_screen:
+            self.prompt_options(key)
+            ret_cap = self.scenario_options(key)
+            if ret_cap is not None:
+                if ret_cap == 1:
+                    cap = None
+                    self.reset_screen = True
+                else:
+                    cap = ret_cap
+                    self.override_TV = True
+
+            if self.override_TV:
                 # Display the frame in full screen
-                time.sleep(0.5)
-                self.display_controller.set_window_layout(5)
-                time.sleep(0.5)
-                self.display_controller.set_window_priority(1)
-                time.sleep(0.5)
-                # cv2.imshow("Video", frame)
+                self.display_controller.set_full_scrn_mode(2)
+                self.override_TV = False
+                
+            if self.reset_screen:
+                # Display the TV in full screen
+                self.display_controller.set_full_scrn_mode(1)
+
                 self.reset_screen = False
                 self.pip_active = False
 
@@ -348,6 +379,7 @@ class VideoPlayer:
         # Release the video capture object and close the window
         cap.release()
         cv2.destroyAllWindows()
+
 
 
 if __name__ == "__main__":

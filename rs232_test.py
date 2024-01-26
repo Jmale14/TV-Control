@@ -14,10 +14,10 @@ from rs_232_class import rs_232_ctl
 rs232_controller = rs_232_ctl(verbose=True)
 
 ##Test modes
-testAll = True
+testAll = False
 vFlip = False
 hFlip = False
-layout = False  
+layout = True  
 priority = False
 swap = False
 audio = True
@@ -55,6 +55,12 @@ if layout or testAll:
 	time.sleep(2)
 	print("Error test")
 	print(rs232_controller.set_window_layout(6))
+	time.sleep(2)
+
+	print("Full screen swap")
+	rs232_controller.set_full_scrn_mode(1)
+	time.sleep(2)
+	rs232_controller.set_full_scrn_mode(2)
 	time.sleep(2)
 
 ## Upside Down Testing

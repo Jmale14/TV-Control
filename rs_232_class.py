@@ -25,16 +25,19 @@ class rs_232_ctl:
 		self.ser.flushOutput()
 		self.ser.close()
 	
-	def response_listen(self, display=True):
+	def response_listen(self, display=False):
 		"""Read serial data while available.
 		"""
 		data = []
 		while True:
 			newLine=self.ser.readline()
 			if len(newLine) > 0:
-				if display:
-					print(newLine.decode('utf-8'))
-				data.append(newLine.decode('utf-8'))
+				try:
+				    if display:
+					    print(newLine.decode('utf-8'))
+				    data.append(newLine.decode('utf-8'))
+				except UnicodeDecodeError:
+					print("Decode Error")
 			else:
 				break
 		return data
@@ -70,7 +73,20 @@ class rs_232_ctl:
 			print("Invalid screen id, enter 1 or 2")
 			response = 1
 		return response
-		
+	
+	def set_full_scrn_mode(self, screen):
+		"""Set screen to full screen
+		"""
+		response = 0
+		if screen in [1, 2]:
+			self.ser.write(f'SET OUT A ROUTE {screen}\r'.encode('utf-8'))
+			if self.verbose:
+				response = self.response_listen()
+		else:
+			print("Invalid screen id, enter 1 or 2")
+			response = 1
+		return response
+	
 	def set_window_layout(self, mode):
 		"""Set window layout mode.
 		
@@ -145,11 +161,18 @@ class rs_232_ctl:
 		"""Get resolution of screen.
 		"""
 		response = 0
-		self.ser.flushInput()
-		self.ser.flushOutput()
-		self.ser.write(f'GET OUT A TIMING\r'.encode('utf-8'))
-		serdata = self.response_listen()
-		response = int(serdata[-1].split(' ')[-1].strip())
+		serdata = []
+		while True:
+			try:
+				self.ser.flushInput()
+				self.ser.flushOutput()
+				self.ser.write(f'GET OUT A TIMING\r'.encode('utf-8'))
+				serdata = self.response_listen()
+				response = int(serdata[-1].split(' ')[-1].strip())
+				break
+			except Exception as e:
+				print(e)
+		
 		if response == 0:
 			resolution = ["native", None, None]
 		elif response == 4:
@@ -343,3 +366,34 @@ class rs_232_ctl:
 			print("Invalid screen value, enter 1 or 2")
 			response = 1
 		return response
+	
+	def save_preset(self, num):
+		"""Get the EDID source currently used on screen.
+		"""
+		response = 0
+		self.ser.flushInput()
+		self.ser.flushOutput()
+		if num in [1, 2, 3, 4]:
+			self.ser.write(f'SAVE PRESET {num}\r'.encode('utf-8'))
+			if self.verbose:
+			    response = self.response_listen()
+		else:
+			print("Invalid num value, enter 1 - 4")
+			response = 1
+		return response
+	
+	def recall_preset(self, num):
+		"""Get the EDID source currently used on screen.
+		"""
+		response = 0
+		self.ser.flushInput()
+		self.ser.flushOutput()
+		if num in [1, 2, 3, 4]:
+			self.ser.write(f'RECALL PRESET {num}\r'.encode('utf-8'))
+			if self.verbose:
+			    response = self.response_listen()
+		else:
+			print("Invalid num value, enter 1 - 4")
+			response = 1
+		return response
+		
